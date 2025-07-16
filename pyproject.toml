@@ -12,6 +12,7 @@ dependencies = [
     "pdfminer-six>=20250506",
     "pillow>=11.3.0",
     "playwright>=1.46.0",
+    "playwright-stealth>=2.0.0",
     "requests>=2.32.4",
     "tqdm>=4.67.1",
 ]

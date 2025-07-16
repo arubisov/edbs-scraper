@@ -3,6 +3,7 @@ from urllib.parse import urljoin, urlparse, urldefrag
 from bs4 import BeautifulSoup
 from pdfminer.high_level import extract_text as extract_pdf_text
 from playwright.async_api import async_playwright
+from playwright_stealth import Stealth
 
 START_URL      = os.getenv("START_URL")
 WIX_PASSWORD   = os.getenv("WIX_PASSWORD")
@@ -12,7 +13,7 @@ OUT_DIR        = "scraped_text"
 async def main():
     os.makedirs(OUT_DIR, exist_ok=True)
     visited, to_visit = set(), {START_URL}
-    async with async_playwright() as pw:
+    async with Stealth().use_async(async_playwright()) as pw:
         browser  = await pw.chromium.launch(headless=True)
         context  = await browser.new_context()
         sem      = asyncio.Semaphore(CONCURRENCY)
