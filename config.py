@@ -3,10 +3,12 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    start_url: HttpUrl  # your site
-    wix_password: str  # login
-    email_to: EmailStr  # recipient
-    email_from: EmailStr  # sender
+    start_url: HttpUrl
+    wix_password: str
+    email_to: EmailStr
+    email_from: EmailStr
+    email_subject: str
+    email_body: str
     credentials_file: str = "credentials.json"
     token_file: str = "token.json"
 
