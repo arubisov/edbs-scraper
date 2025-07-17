@@ -21,11 +21,12 @@ metrics = {
     "pages_queued": 0,
     "pages_done": 0,
     "pdfs_downloaded": 0,
+    "retries": 0,
     "failures": 0,
 }
 
 async def main():
-    OUT_DIR.mkdir(exist_ok=True)
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
     visited, to_visit = set(), {START_URL}
     async with Stealth().use_async(async_playwright()) as pw:
         browser  = await pw.chromium.launch(headless=True)
@@ -36,30 +37,20 @@ async def main():
         async def handle_response(res):
             ctype = res.headers.get("content-type", "")
             if "application/pdf" in ctype.lower():
-                try:
-                    await save_pdf(res, context)
-                except Exception as e:
-                    print("⚠️ PDF save failed for", res.url, e)
+                await handle_pdf(res)
 
         context.on("response", handle_response)
 
         async def worker():
             while to_visit:
                 url = to_visit.pop()
-                if url in visited: continue
+                if not url or url in visited: continue
                 visited.add(url)
                 async with sem:
-                    # handle PDF links directly rather than navigating to them
+                    # if href is to a PDF, use GET directly instead of page.goto()
                     if url.lower().endswith(".pdf"):
-                        try:
-                            res = await context.request.get(url)
-                            await save_pdf(res, context)
-                        except Exception as e:
-                            metrics["failures"] += 1
-                            logging.warning(
-                                "PDF save failed for %s: %s", res.url, e,
-                                exc_info=logging.getLogger().isEnabledFor(logging.DEBUG)
-                            )
+                        res = await context.request.get(url)
+                        await handle_pdf(res)
                     else:
                         try:
                             await process_page(context, url, to_visit, visited)
@@ -80,9 +71,20 @@ async def main():
 
         await asyncio.gather(*(worker() for _ in range(CONCURRENCY)))
         await browser.close()
+        
+async def handle_pdf(res):
+    try:
+        data = await res.body()
+        await save_pdf(res.url, res.status, data)
+        # await save_pdf(res, context)
+    except Exception as e:
+        metrics["failures"] += 1
+        logging.warning(
+            "PDF save failed for %s: %s", res.url, e,
+            exc_info=logging.getLogger().isEnabledFor(logging.DEBUG)
+        )
 
-async def save_pdf(res, context):
-    url  = res.url
+async def save_pdf(url: str, status: int, data: bytes):
     name = urlparse(url).path.split("/")[-1] or "doc.pdf"
     path = OUT_DIR / name
     
@@ -91,17 +93,16 @@ async def save_pdf(res, context):
         logging.info("Skipping PDF download - already exists: %s", name)
         return
     
-    if res.status != 200:
+    if status != 200:
+        logging.warning("HTTP error %d fetching PDF for %s", status, url)
         metrics["failures"] += 1
-        logging.warning("HTTP error %d fetching PDF for %s", res.status, url)
         return
-    data = await res.body()
     
-    # save pdf version
+    # save pdf
     async with aiofiles.open(path, "wb") as f:
         await f.write(data)
     
-    # save extracted text version
+    # save extracted text
     text = await asyncio.to_thread(extract_pdf_text, path)
     text_path = path.with_suffix(path.suffix + ".txt")
     async with aiofiles.open(text_path, "w", encoding="utf-8") as f:
@@ -115,12 +116,12 @@ async def process_page(context, url, to_visit, visited):
     try:
         await page.goto(url, wait_until="networkidle", timeout=45000)
     except Exception as e:
-        metrics["failures"] += 1
         logging.warning(
             "Error navigating to %s: %s", url, e,
             exc_info=logging.getLogger().isEnabledFor(logging.DEBUG)
         )
         await page.close()
+        metrics["failures"] += 1
         return
     
     # → handle password‐protected pages
@@ -134,7 +135,6 @@ async def process_page(context, url, to_visit, visited):
             await page.locator('#SITE_CONTAINER').wait_for(state="visible", timeout=10000)
             await page.wait_for_load_state("networkidle", timeout=10000)
     except Exception as e:
-        metrics["failures"] += 1
         logging.warning(
             "Password entry failed for %s: %s", url, e,
             exc_info=logging.getLogger().isEnabledFor(logging.DEBUG)
@@ -153,11 +153,9 @@ async def process_page(context, url, to_visit, visited):
     nav_error = False
     first_line = texts[0].splitlines()[0] if texts else ""
     if first_line.strip() == "ERROR: FORBIDDEN":
-        metrics["failures"] += 1
         logging.warning("Forbidden error on %s - retrying later", url)
         nav_error = True
     if first_line.strip() == "Password Protected":
-        metrics["failures"] += 1
         logging.warning("Password protection error on %s - retrying later", url)
         nav_error = True
         
@@ -166,6 +164,7 @@ async def process_page(context, url, to_visit, visited):
         to_visit.add(url)
         await page.close()
         await asyncio.sleep(5)
+        metrics["retries"] += 1
         return
 
     # persist
