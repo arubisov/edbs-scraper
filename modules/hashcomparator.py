@@ -14,8 +14,8 @@ import os, re, hashlib, argparse, logging
 from datetime import datetime
 from typing import Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from . import logconfig
-lgg = logconfig.setup_logger(logging.INFO)
+from logconfig import setup_logger
+lgg = setup_logger(logging.INFO)
 
 
 def sha256_hash_file(filePath: str) -> Optional[tuple[str, str]]:
@@ -125,8 +125,6 @@ if __name__ == "__main__":
 
     parser.add_argument("olddir", nargs="?", help="Path to the old directory (positional or --olddirectory)")
     parser.add_argument("newdir", nargs="?", help="Path to the new directory (positional or --newdirectory)")
-    parser.add_argument("--olddirectory", dest="olddir_kw", help="Path to the old directory (keyword arg)")
-    parser.add_argument("--newdirectory", dest="newdir_kw", help="Path to the new directory (keyword arg)")
 
     args = parser.parse_args()
 
