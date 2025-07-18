@@ -8,8 +8,8 @@ Functions:
 
 import os, logging, shutil
 from difflib import SequenceMatcher
-from . import logconfig
-lgg = logconfig.setup_logger(logging.INFO)
+from logconfig import setup_logger
+lgg = setup_logger(logging.INFO)
 
 def generate_diff_report(changed_files, added_files, removed_files, dir1, dir2):
     # Derive base names of input directories
