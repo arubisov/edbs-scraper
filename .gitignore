@@ -1,6 +1,6 @@
 # project-specific
-scraped_text/
-results/
+results/*
+_testscripts/
 
 # google APIs
 credentials.json

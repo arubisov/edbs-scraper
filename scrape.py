@@ -1,23 +1,30 @@
 import asyncio
 import logging
-import os
 import re
 from datetime import datetime
+from operator import is_
 from pathlib import Path
 from urllib.parse import urldefrag, urljoin, urlparse
 
 import aiofiles
 from bs4 import BeautifulSoup
 from pdfminer.high_level import extract_text as extract_pdf_text
-from playwright.async_api import BrowserContext, TimeoutError, async_playwright
+from playwright.async_api import (
+    APIResponse,
+    BrowserContext,
+    Response,
+    TimeoutError,
+    async_playwright,
+)
 from playwright_stealth import Stealth
 
 from config import settings
 
 START_URL = settings.start_url
 WIX_PASSWORD = settings.wix_password
+URL_BLACKLIST = settings.url_blacklist
 CONCURRENCY = 5
-OUT_DIR = Path("results") / datetime.now().strftime("%d-%H%M%S")
+OUT_DIR = Path("results") / datetime.now().strftime("%y%m%d-%H%M%S")
 
 logging.basicConfig(
     level=logging.INFO,
@@ -41,17 +48,28 @@ async def main():
         sem = asyncio.Semaphore(CONCURRENCY)
 
         # -- PDF interception -------------------------------------------------
-        async def handle_response(res):
+        async def handle_response(res: Response):
             ctype = res.headers.get("content-type", "")
             if "application/pdf" in ctype.lower():
-                await handle_pdf(res)
+                try:
+                    await handle_pdf(res)
+                except Exception as e:
+                    metrics["retries"] += 1
+                    logging.warning(
+                        "Initial PDF fetch failed for %s: %s. Retrying with fresh request",
+                        res.url,
+                        e,
+                        exc_info=logging.getLogger().isEnabledFor(logging.DEBUG),
+                    )
+                    fresh_res = await context.request.get(res.url)
+                    await handle_pdf(fresh_res, is_retry=True)
 
         context.on("response", handle_response)
 
         async def worker():
             while to_visit:
                 url = to_visit.pop()
-                if not url or url in visited:
+                if not url or url in visited or url in URL_BLACKLIST:
                     continue
                 visited.add(url)
                 async with sem:
@@ -84,19 +102,21 @@ async def main():
         await browser.close()
 
 
-async def handle_pdf(res):
+async def handle_pdf(res: Response | APIResponse, is_retry: bool = False):
     try:
         data = await res.body()
         await save_pdf(res.url, res.status, data)
-        # await save_pdf(res, context)
     except Exception as e:
-        metrics["failures"] += 1
-        logging.warning(
-            "PDF save failed for %s: %s",
-            res.url,
-            e,
-            exc_info=logging.getLogger().isEnabledFor(logging.DEBUG),
-        )
+        if is_retry:
+            metrics["failures"] += 1
+            logging.warning(
+                "PDF save failed for %s: %s",
+                res.url,
+                e,
+                exc_info=logging.getLogger().isEnabledFor(logging.DEBUG),
+            )
+        else:
+            raise e
 
 
 async def save_pdf(url: str, status: int, data: bytes):
@@ -210,7 +230,6 @@ async def process_page(context: BrowserContext, url: str, to_visit: set, visited
     tabs = await page.get_by_role("tab").all()
     for tab in tabs:
         try:
-            print(f"clicking on {tab}")
             await tab.click()
             # wait for the PDF response to fire your save handler (equivalent to sleep)
             await page.wait_for_timeout(500)
