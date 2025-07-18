@@ -114,8 +114,8 @@ async def save_pdf(url: str, status: int, data: bytes):
         return
 
     # save pdf
-    async with aiofiles.open(path, "wb") as f:
-        await f.write(data)
+    # async with aiofiles.open(path, "wb") as f:
+    #     await f.write(data)
 
     # save extracted text
     text = await asyncio.to_thread(extract_pdf_text, path)
