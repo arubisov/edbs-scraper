@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import os
 import re
 from datetime import datetime
 from operator import is_

@@ -10,34 +10,36 @@ Functions:
 - hash_and_compare(directory1, directory2): Hashes files in both directories (in parallel) and returns lists of changed, added, and removed files.
 """
 
-import os, re, hashlib, argparse, logging
+import re, hashlib, argparse, logging
+from pathlib import Path
 from datetime import datetime
-from typing import Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from logconfig import setup_logger
+from utils.logconfig import setup_logger
 lgg = setup_logger(logging.INFO)
 
 
-def sha256_hash_file(filePath: str) -> Optional[tuple[str, str]]:
-    if not os.path.isfile(filePath):
+def sha256_hash_file(file_path: Path) -> tuple[str, str] | None:
+    if not file_path.is_file():
         return None
+
     sha256 = hashlib.sha256()
     try:
-        with open(filePath, "rb") as f:
+        with file_path.open("rb") as f:
             for chunk in iter(lambda: f.read(8192), b""):
                 sha256.update(chunk)
-        return os.path.basename(filePath), sha256.hexdigest()
+        return file_path.name, sha256.hexdigest()
     except Exception as e:
-        lgg.er(f"Could not hash '{filePath}': {e}")
+        lgg.er(f"Could not hash '{file_path}': {e}")
         return None
 
 
 def hash_directory_multithreaded(path: str) -> dict[str, str]:
-    if not os.path.isdir(path):
-        lgg.w(f"Directory does not exist: {path}")
+    dir_path = Path(path).resolve()
+    if not dir_path.is_dir():
+        lgg.w(f"Directory does not exist: {dir_path}")
         return {}
 
-    file_paths = [os.path.join(path, f) for f in os.listdir(path)]
+    file_paths = [p for p in dir_path.iterdir() if p.is_file()]
     hashes = {}
 
     with ThreadPoolExecutor() as executor:
@@ -52,11 +54,11 @@ def hash_directory_multithreaded(path: str) -> dict[str, str]:
 
 
 def is_timestamped_dir(name: str) -> bool:
-    return bool(re.match(r"\d{2}-\d{6}$", os.path.basename(name)))
+    return bool(re.match(r"\d{8}-\d{6}$", name))
 
 
 def sort_dirs_if_timestamped(dir1: str, dir2: str) -> tuple[str, str]:
-    base1, base2 = os.path.basename(dir1), os.path.basename(dir2)
+    base1, base2 = Path(dir1).name, Path(dir2).name
     if is_timestamped_dir(base1) and is_timestamped_dir(base2):
         try:
             ts1 = datetime.strptime(base1, "%y%m%d-%H%M%S")
@@ -122,20 +124,19 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Compare two directories of .txt files using SHA-256 hashes."
     )
-
-    parser.add_argument("olddir", nargs="?", help="Path to the old directory (positional or --olddirectory)")
-    parser.add_argument("newdir", nargs="?", help="Path to the new directory (positional or --newdirectory)")
+    parser.add_argument("olddir", nargs="?", help="Path to the old directory (positional)")
+    parser.add_argument("newdir", nargs="?", help="Path to the new directory (positional)")
 
     args = parser.parse_args()
 
-    dir1 = args.olddir_kw or args.olddir
-    dir2 = args.newdir_kw or args.newdir
+    dir1 = Path(args.olddir).resolve() if args.olddir else None
+    dir2 = Path(args.newdir).resolve() if args.newdir else None
 
     if not dir1 or not dir2:
-        parser.error("You must provide both directories either as positional or keyword arguments.")
+        parser.error("You must provide both directories as positional arguments, preferably as [oldDir] [newDir].")
 
-    dir1, dir2 = sort_dirs_if_timestamped(dir1, dir2)
-    lgg.i(f"Comparing directories:\n  OLD: {dir1}\n  NEW: {dir2}")
+    dir1_str, dir2_str = sort_dirs_if_timestamped(str(dir1), str(dir2))
+    lgg.i(f"Comparing directories:\n  OLD: {dir1_str}\n  NEW: {dir2_str}")
 
-    differences, added_files, removed_files = hash_and_compare(dir1, dir2)
+    differences, added_files, removed_files = hash_and_compare(dir1_str, dir2_str)
     print((differences, added_files, removed_files))

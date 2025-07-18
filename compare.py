@@ -10,10 +10,11 @@ Functions:
 - main(): Parses CLI arguments or prompts the user, then kicks off the directory comparison process.
 """
 
-import os, re, argparse, logging
-from modules.logconfig import setup_logger
-from modules.hashcomparator import hash_and_compare
-from modules.diffgen import generate_diff_report
+import re, argparse, logging
+from pathlib import Path
+from utils.logconfig import setup_logger
+from utils.hashcomparator import hash_and_compare
+from utils.diffgen import generate_diff_report
 lgg = setup_logger(logging.INFO)
 
 def prompt_yes_no(message: str) -> bool:
@@ -27,20 +28,21 @@ def prompt_yes_no(message: str) -> bool:
             print("Please enter 'y' or 'n'.")
 
 
-def get_directory_input(prompt_text: str) -> str:
+def get_directory_input(prompt_text: str) -> Path:
     while True:
-        path = input(f"{prompt_text}: ").strip()
-        if os.path.isdir(path):
+        path = Path(input(f"{prompt_text}: ").strip()).resolve()
+        if path.is_dir():
             return path
         lgg.er("That path does not exist. Try again.")
 
 
 def is_timestamped_dir(name: str) -> bool:
-    return bool(re.match(r"^\d{8}-\d{6}$", os.path.basename(name)))
+    return bool(re.match(r"^\d{8}-\d{6}$", name))
 
-def run_comparison(dir1: str, dir2: str) -> tuple[str, str] | None:
-    base1_input = os.path.basename(os.path.normpath(dir1))
-    base2_input = os.path.basename(os.path.normpath(dir2))
+
+def run_comparison(dir1: Path, dir2: Path) -> tuple[Path, Path] | None:
+    base1_input = dir1.name
+    base2_input = dir2.name
 
     if is_timestamped_dir(base1_input) and is_timestamped_dir(base2_input):
         if base1_input > base2_input:
@@ -58,21 +60,20 @@ def run_comparison(dir1: str, dir2: str) -> tuple[str, str] | None:
 
     return dir1, dir2
 
-def main(old_dir: str, new_dir: str) -> None:
-    differences, added_files, removed_files = hash_and_compare(old_dir, new_dir)
-    generate_diff_report(differences, added_files, removed_files, old_dir, new_dir)
+
+def main(old_dir: Path, new_dir: Path) -> None:
+    differences, added_files, removed_files = hash_and_compare(str(old_dir), str(new_dir))
+    generate_diff_report(differences, added_files, removed_files, str(old_dir), str(new_dir))
 
 
 def cli():
     parser = argparse.ArgumentParser(description="Execution handler for hash & diff tools.")
     parser.add_argument("olddir", nargs="?", help="Old directory (positional)")
     parser.add_argument("newdir", nargs="?", help="New directory (positional)")
-
     args = parser.parse_args()
 
-    # Priority: positional > prompt
-    dir1 = args.olddir or get_directory_input("Enter path to OLD directory")
-    dir2 = args.newdir or get_directory_input("Enter path to NEW directory")
+    dir1 = Path(args.olddir).resolve() if args.olddir else get_directory_input("Enter path to OLD directory")
+    dir2 = Path(args.newdir).resolve() if args.newdir else get_directory_input("Enter path to NEW directory")
 
     sorted_dirs = run_comparison(dir1, dir2)
     if not sorted_dirs:
