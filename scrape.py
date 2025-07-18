@@ -17,7 +17,7 @@ from config import settings
 START_URL = settings.start_url
 WIX_PASSWORD = settings.wix_password
 CONCURRENCY = 5
-OUT_DIR = Path("results") / datetime.now().strftime("%d-%H%M%S")
+OUT_DIR = Path("results") / datetime.now().strftime("%y%m%d-%H%M%S")
 
 logging.basicConfig(
     level=logging.INFO,
