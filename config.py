@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    start_url: HttpUrl
+    start_url: str
     wix_password: str
     email_to: EmailStr
     email_from: EmailStr
