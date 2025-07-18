@@ -1,6 +1,7 @@
 # project-specific
 scraped_text/
 results/
+modules/_testscripts/
 
 # google APIs
 credentials.json
