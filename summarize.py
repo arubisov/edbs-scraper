@@ -74,8 +74,7 @@ if __name__ == "__main__":
         parser.error(f"{filepath!r} is not a valid file")
 
     try:
-        filename = "250719-130313_250720-133410.diff.txt"
-        old_timestamp, new_timestamp = filename.split(".")[0].split("_")
+        old_timestamp, new_timestamp = filepath.name.split(".")[0].split("_")
         from_date = datetime.strptime(old_timestamp, "%d%m%y-%H%M%S").strftime("%Y-%m-%dT%H:%M:%S")
         to_date = datetime.strptime(new_timestamp, "%d%m%y-%H%M%S").strftime("%Y-%m-%dT%H:%M:%S")
     except Exception as e:

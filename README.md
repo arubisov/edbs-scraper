@@ -11,6 +11,6 @@ uv run --env-file .env python scrape.py
 <remove PDFs from export/new_folder>
 uv run --env-file .env python compare.py <old_folder> <new_folder>
 uv run --env-file .env python utils/extract_artifacts_v1.py <new_folder>
-uv run summarization.py <path_to_diff_file>
+uv run summarize.py <path_to_diff_file>
 uv run --env-file .env python send_email.py <new_folder>
 ```
