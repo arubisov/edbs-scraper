@@ -1126,6 +1126,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "aiofiles" },
     { name = "beautifulsoup4" },
+    { name = "colorama" },
     { name = "dotenv" },
     { name = "google-api-python-client" },
     { name = "google-auth-httplib2" },
@@ -1149,6 +1150,7 @@ dependencies = [
 requires-dist = [
     { name = "aiofiles", specifier = ">=24.1.0" },
     { name = "beautifulsoup4", specifier = ">=4.13.4" },
+    { name = "colorama", specifier = ">=0.4.6" },
     { name = "dotenv", specifier = ">=0.9.9" },
     { name = "google-api-python-client", specifier = ">=2.176.0" },
     { name = "google-auth-httplib2", specifier = ">=0.2.0" },
