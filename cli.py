@@ -9,17 +9,7 @@ Functions:
 import asyncio
 from utils.scrape import main as run_scraper
 from utils.compare import cli as run_diff
-
-
-def prompt_yes_no(msg: str) -> bool:
-    while True:
-        response = input(f"{msg} (y/n): ").strip().lower()
-        if response in ["y", "yes"]:
-            return True
-        elif response in ["n", "no"]:
-            return False
-        else:
-            print("Please enter 'y' or 'n'.")
+from utils.yn import prompt_yes_no
 
 
 def main():

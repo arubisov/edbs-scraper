@@ -16,17 +16,9 @@ from pathlib import Path
 from utils.configs.config import setup_logger
 from utils.diffscripts.hashcomparator import hash_and_compare
 from utils.diffscripts.diffgen import generate_diff_report
-lgg = setup_logger(logging.INFO)
+from utils.yn import prompt_yes_no
 
-def prompt_yes_no(message: str) -> bool:
-    while True:
-        response = input(f"{message} (y/n): ").strip().lower()
-        if response in ["y", "yes"]:
-            return True
-        elif response in ["n", "no"]:
-            return False
-        else:
-            print("Please enter 'y' or 'n'.")
+lgg = setup_logger(logging.INFO)
 
 
 def get_directory_input(prompt_text: str) -> Path:
@@ -66,8 +58,6 @@ def main(old_dir: Path, new_dir: Path) -> None:
     differences, added_files, removed_files = hash_and_compare(str(old_dir), str(new_dir))
     generate_diff_report(differences, added_files, removed_files, str(old_dir), str(new_dir))
 
-def quit():
-    print("\nComparison complete. Exiting.")
 
 def cli():
     parser = argparse.ArgumentParser(description="Execution handler for hash & diff tools.")
