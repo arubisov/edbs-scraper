@@ -1,7 +1,7 @@
 """
 PATH: ./wix-scraper/utils/
 """
-
+import re
 import argparse
 import logging
 from datetime import datetime
@@ -42,12 +42,28 @@ def summarize_diff(text: str, from_date: str, to_date: str) -> str:
     return response.output_text
 
 
+def sloppy_to_url(filename: str) -> str:
+    return re.sub(
+        r"^https_www_([a-z0-9\-]+)_com_(.+)", 
+        lambda m: f"https://www.{m.group(1)}.com/" + m.group(2).replace("_", "/"), 
+        filename,
+        flags=re.IGNORECASE
+    )
+
+
 def prepend_summary_to_file(filepath: str, summary: str) -> None:
-    with open(filepath, "r") as f:
+    with open(filepath, "r", encoding="utf-8") as f:
         original_content = f.read()
 
-    with open(filepath, "w") as f:
-        f.write(summary + "\n\n### Detailed changes\n\n" + original_content)
+    # Fix only lines starting with "- Source: https_www..."
+    updated_content = re.sub(
+        r"(?m)^(- Source: )(https_www_[\w\-]+_com_[\w\-./]+)",  # only match full line
+        lambda m: m.group(1) + sloppy_to_url(m.group(2)),
+        original_content,
+    )
+
+    with open(filepath, "w", encoding="utf-8") as f:
+        f.write(summary + "\n\n### Detailed changes\n\n" + updated_content)
 
 
 def main(filepath: str, from_date: str, to_date: str) -> None:
@@ -84,5 +100,5 @@ if __name__ == "__main__":
         parser.error(
             f"{filepath!r} does not have the expect format <date_from>_<date_to>.diff.txt"
         )
-
+    
     main(filepath, from_date, to_date)
