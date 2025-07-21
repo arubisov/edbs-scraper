@@ -1,20 +1,21 @@
 """
-compare.py - updated 2025-07-17
+PATH: ./wix-scraper/utils/
 
 Functions:
 - prompt_yes_no(message): Repeatedly prompts the user for a yes/no input and returns True or False.
 - get_directory_input(prompt_text): Prompts the user for a valid directory path and validates its existence.
 - is_timestamped_dir(name): Returns True if the given directory name matches the YYYYMMDD-HHMMSS timestamp format.
-- sort_by_timestamp_if_possible(dir1, dir2): If both directories are timestamped, returns them in chronological order.
-- run_comparison(dir1, dir2): Handles ordering logic, prompts the user for confirmation, runs the hash comparison, and generates the diff report.
-- main(): Parses CLI arguments or prompts the user, then kicks off the directory comparison process.
+- run_comparison(dir1, dir2): Confirms timestamp sort order and prompts user for comparison approval.
+- main(old_dir, new_dir): Executes hashing and diff generation between the given directories.
+- cli(): CLI interface for directory input, comparison validation, and main execution call.
 """
+
 
 import re, argparse, logging
 from pathlib import Path
-from utils.logconfig import setup_logger
-from utils.hashcomparator import hash_and_compare
-from utils.diffgen import generate_diff_report
+from utils.configs.config import setup_logger
+from utils.diffscripts.hashcomparator import hash_and_compare
+from utils.diffscripts.diffgen import generate_diff_report
 lgg = setup_logger(logging.INFO)
 
 def prompt_yes_no(message: str) -> bool:
@@ -65,6 +66,8 @@ def main(old_dir: Path, new_dir: Path) -> None:
     differences, added_files, removed_files = hash_and_compare(str(old_dir), str(new_dir))
     generate_diff_report(differences, added_files, removed_files, str(old_dir), str(new_dir))
 
+def quit():
+    print("\nComparison complete. Exiting.")
 
 def cli():
     parser = argparse.ArgumentParser(description="Execution handler for hash & diff tools.")
@@ -81,6 +84,7 @@ def cli():
 
     old_dir, new_dir = sorted_dirs
     main(old_dir, new_dir)
+
 
 
 if __name__ == "__main__":

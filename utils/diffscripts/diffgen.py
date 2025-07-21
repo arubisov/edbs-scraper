@@ -1,8 +1,8 @@
 """
-diffgen.py - updated 2025-07-17
+PATH: ./wix-scraper/utils/diffscripts/
 
 Functions:
-- generate_diff_report(filenames, addedFiles, removedFiles, dir1, dir2):
+- generate_diff_report(changed_files, added_files, removed_files, dir1, dir2):
   Compares matching files line-by-line and outputs a diff report, including added and removed files.
 """
 
@@ -10,7 +10,7 @@ import logging
 from pathlib import Path
 from difflib import SequenceMatcher
 from shutil import copy2
-from utils.logconfig import setup_logger
+from utils.configs.config import setup_logger
 
 lgg = setup_logger(logging.INFO)
 
@@ -22,11 +22,11 @@ def generate_diff_report(changed_files, added_files, removed_files, dir1, dir2):
     name2 = dir2_path.name
     filename_out = f"{name1}_{name2}.diff.txt"
 
-    # Use NEW (more recent) directory's name for export folder
     export_folder_name = name2
-    base_dir = Path(__file__).resolve().parent
-    exports_dir = base_dir.parent / "results" / "exports" / export_folder_name
-    exports_dir.mkdir(parents=True, exist_ok=True)
+    project_root = Path(__file__).resolve().parents[2]
+    exports_dir = project_root / "results" / "exports" / export_folder_name
+    pdf_exports_dir = exports_dir / "pdf"
+    pdf_exports_dir.mkdir(parents=True, exist_ok=True)
 
     output_file = exports_dir / filename_out
 
@@ -71,20 +71,20 @@ def generate_diff_report(changed_files, added_files, removed_files, dir1, dir2):
 
     lgg.i(f"Differences written to: {output_file}")
 
-    # Export added files from dir2
+    # Export added files to ./pdf
     for file in added_files:
         src = dir2_path / file
-        dst = exports_dir / file
+        dst = pdf_exports_dir / file
         try:
             copy2(src, dst)
             lgg.i(f"Exported added file: {file}")
         except Exception as e:
             lgg.i(f"Failed to export '{file}': {e}")
 
-    # Export changed files from dir2
+    # Export changed files to ./pdf
     for file in changed_files:
         src = dir2_path / file
-        dst = exports_dir / file
+        dst = pdf_exports_dir / file
         try:
             copy2(src, dst)
             lgg.i(f"Exported changed file: {file}")

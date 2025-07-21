@@ -1,3 +1,7 @@
+"""
+PATH: ./wix-scraper/utils/
+"""
+
 import argparse
 import logging
 from datetime import datetime
@@ -7,9 +11,8 @@ from jinja2 import BaseLoader, Environment
 from openai import OpenAI
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
-from config import settings
-from prompt import MESSAGE_TEMPLATE, SUMMARY_PREAMBLE, SYSTEM_PROMPT
-from utils.logconfig import setup_logger
+from utils.configs.config import settings, setup_logger
+from utils.configs.prompt import MESSAGE_TEMPLATE, SUMMARY_PREAMBLE, SYSTEM_PROMPT
 
 lgg = setup_logger(logging.INFO)
 
