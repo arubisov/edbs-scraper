@@ -1,7 +1,5 @@
 # project-specific
-..scratchpad/
 results/*
-_testscripts/
 
 # google APIs
 credentials.json
