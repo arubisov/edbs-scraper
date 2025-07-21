@@ -1,3 +1,8 @@
+"""
+PATH: ./wix-scraper/utils/
+"""
+
+
 import argparse
 import base64
 import mimetypes
@@ -15,7 +20,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-from config import settings
+from utils.configs.config import settings
 
 SCOPES = ["https://www.googleapis.com/auth/gmail.compose"]
 
@@ -59,7 +64,7 @@ def gmail_send_message(folder_path: Path):
 
         # attachments from the provided folder
         for file_path in folder_path.iterdir():
-            if file_path.is_file():
+            if file_path.is_file() and file_path.suffix.lower() == ".txt":
                 # guess MIME type
                 type_subtype, _ = mimetypes.guess_type(str(file_path))
                 if not type_subtype:

@@ -1,5 +1,5 @@
 """
-hashcomparator.py - updated 2025-07-17
+PATH: ./wix-scraper/utils/diffscripts/
 
 Functions:
 - sha256_hash_file(filePath): Hashes a single file using SHA-256 and returns (filename, hash).
@@ -14,7 +14,7 @@ import re, hashlib, argparse, logging
 from pathlib import Path
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from utils.logconfig import setup_logger
+from utils.configs.config import setup_logger
 lgg = setup_logger(logging.INFO)
 
 
@@ -39,7 +39,7 @@ def hash_directory_multithreaded(path: str) -> dict[str, str]:
         lgg.w(f"Directory does not exist: {dir_path}")
         return {}
 
-    file_paths = [p for p in dir_path.iterdir() if p.is_file()]
+    file_paths = [p for p in dir_path.rglob("*") if p.is_file()]
     hashes = {}
 
     with ThreadPoolExecutor() as executor:
