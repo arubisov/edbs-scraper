@@ -63,10 +63,10 @@ Changes observed between {{FROM_DATE}} and {{TO_DATE}}
 - Do not use file deletion as evidence for anything - it may just be a server issue. File addition can be used as evidence.
 - For each summary point, cite the file that the change is coming from.
 - Organize into two subsections: the first section pertains to news out of the Applia continent (Watogan, Korame, Kanawhaton, Monacov, New Mecklenburg, Meadowland); the second section is for the Lumbee Island Chain (Vostain, Waccamaw)
+- In the expected output below, omit the SIR line if the change is simply significant but not an SIR or otherwise on the ICM.
 
 ### Expected output:
 
-```
 ### Applia
 
 1. Title of the page [<source filename>]
@@ -76,6 +76,7 @@ Changes observed between {{FROM_DATE}} and {{TO_DATE}}
 2. Title of the page [<source filename>]
   - <1-2 sentences describing the change.>
   - 5 W's: who, what, where, when, why.
+  - SIR: <if applicable, note the associated indicator or SIR number that is relevant. if not applicable, skip this line>
 3. etc...
 
 ### Lumbee Island
@@ -83,8 +84,8 @@ Changes observed between {{FROM_DATE}} and {{TO_DATE}}
 1. Title of the page [<source filename>]
   - <1-2 sentences describing the change.>
   - 5 W's: who, what, where, when, why.
+  - SIR: <if applicable, note the associated indicator or SIR number that is relevant. if not applicable, skip this line>
 2. etc...
-```
 """
 
 SUMMARY_PREAMBLE = """
