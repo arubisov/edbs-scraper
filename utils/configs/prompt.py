@@ -57,18 +57,35 @@ MESSAGE_TEMPLATE = """
 Changes observed between {{FROM_DATE}} and {{TO_DATE}}
 
 ### Task
-- Decide which changes are worth reporting. Prioritise at the top any changes that directly relate to the ICM, and if they do, note upfront the potential SIR number from the ICM that is relevant.
+- Decide which changes are worth reporting. Prioritise at the top any changes that directly relate to the ICM.
 - In addition, you may choose to report significant changes that aren't directly related to the ICM.
 - For each change worth reporting, provide a 1-2 sentence summary of the change. Do not add a layer of interpretation or analysis; simply condense it into 1-2 short sentences.
 - Do not use file deletion as evidence for anything - it may just be a server issue. File addition can be used as evidence.
 - For each summary point, cite the file that the change is coming from.
+- Organize into two subsections: the first section pertains to news out of the Applia continent (Watogan, Korame, Kanawhaton, Monacov, New Mecklenburg, Meadowland); the second section is for the Lumbee Island Chain (Vostain, Waccamaw)
+- In the expected output below, omit the SIR line if the change is simply significant but not an SIR or otherwise on the ICM.
 
-### Expected output
-1. <1-2 sentences describing the change.>
-  - Source: <filename>
-2. <1-2 sentences describing the change.>
-  - Source: <filename>
+### Expected output:
+
+### Applia
+
+1. Title of the page [<source filename>]
+  - <1-2 sentences describing the change.>
+  - 5 W's: who, what, where, when, why.
+  - SIR: <if applicable, note the associated indicator or SIR number that is relevant. if not applicable, skip this line>
+2. Title of the page [<source filename>]
+  - <1-2 sentences describing the change.>
+  - 5 W's: who, what, where, when, why.
+  - SIR: <if applicable, note the associated indicator or SIR number that is relevant. if not applicable, skip this line>
 3. etc...
+
+### Lumbee Island
+
+1. Title of the page [<source filename>]
+  - <1-2 sentences describing the change.>
+  - 5 W's: who, what, where, when, why.
+  - SIR: <if applicable, note the associated indicator or SIR number that is relevant. if not applicable, skip this line>
+2. etc...
 """
 
 SUMMARY_PREAMBLE = """
