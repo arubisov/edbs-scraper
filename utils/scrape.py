@@ -17,12 +17,7 @@ from urllib.parse import urldefrag, urljoin, urlparse
 
 import aiofiles
 from bs4 import BeautifulSoup
-from playwright.async_api import (
-    BrowserContext,
-    Response,
-    TimeoutError,
-    async_playwright,
-)
+from playwright.async_api import BrowserContext, Response, TimeoutError, async_playwright
 from playwright_stealth import Stealth
 
 from utils.configs.config import settings
@@ -107,8 +102,13 @@ async def main():
         await browser.close()
 
 
-async def process_page(context: BrowserContext, url: str, to_visit: set, visited: set, pdf_queue: asyncio.Queue):
+async def process_page(
+    context: BrowserContext, url: str, to_visit: set, visited: set, pdf_queue: asyncio.Queue
+):
     retry_page = False
+
+    logging.info(f"Visiting page {url}")
+
     page = await context.new_page()
 
     try:
@@ -182,7 +182,10 @@ def url_to_filename(u: str) -> str:
 
 
 def is_same_domain(u: str) -> bool:
-    return urlparse(u).netloc == urlparse(START_URL).netloc
+    if urlparse(u).netloc != urlparse(START_URL).netloc:
+        logging.warning(f"Detected link to external domain: {u}")
+        return False
+    return True
 
 
 if __name__ == "__main__":
