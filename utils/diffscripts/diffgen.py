@@ -14,6 +14,35 @@ from utils.configs.config import setup_logger
 
 lgg = setup_logger(logging.INFO)
 
+
+def export_file(file: str, src_dir: Path, dst_root: Path):
+    # Try file in root
+    src = src_dir / file
+    if not src.exists():
+        # Try file in pdf subdir
+        alt_src = src_dir / "pdf" / file
+        if alt_src.exists():
+            src = alt_src
+        else:
+            lgg.i(f"Failed to export '{file}': File not found in root or /pdf")
+            return
+
+    # Determine export target
+    if file.endswith(".pdf"):
+        dst = dst_root / "pdf" / file
+    elif file.endswith(".txt"):
+        dst = dst_root / file
+    else:
+        return
+
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        copy2(src, dst)
+        lgg.i(f"Exported: {file}")
+    except Exception as e:
+        lgg.i(f"Failed to export '{file}': {e}")
+
+
 def generate_diff_report(changed_files, added_files, removed_files, dir1, dir2):
     dir1_path = Path(dir1).resolve()
     dir2_path = Path(dir2).resolve()
@@ -25,8 +54,7 @@ def generate_diff_report(changed_files, added_files, removed_files, dir1, dir2):
     export_folder_name = name2
     project_root = Path(__file__).resolve().parents[2]
     exports_dir = project_root / "results" / "exports" / export_folder_name
-    pdf_exports_dir = exports_dir / "pdf"
-    pdf_exports_dir.mkdir(parents=True, exist_ok=True)
+    exports_dir.mkdir(parents=True, exist_ok=True)
 
     output_file = exports_dir / filename_out
 
@@ -71,22 +99,8 @@ def generate_diff_report(changed_files, added_files, removed_files, dir1, dir2):
 
     lgg.i(f"Differences written to: {output_file}")
 
-    # Export added files to ./pdf
     for file in added_files:
-        src = dir2_path / file
-        dst = pdf_exports_dir / file
-        try:
-            copy2(src, dst)
-            lgg.i(f"Exported added file: {file}")
-        except Exception as e:
-            lgg.i(f"Failed to export '{file}': {e}")
+        export_file(file, dir2_path, exports_dir)
 
-    # Export changed files to ./pdf
     for file in changed_files:
-        src = dir2_path / file
-        dst = pdf_exports_dir / file
-        try:
-            copy2(src, dst)
-            lgg.i(f"Exported changed file: {file}")
-        except Exception as e:
-            lgg.i(f"Failed to export changed file '{file}': {e}")
+        export_file(file, dir2_path, exports_dir)
