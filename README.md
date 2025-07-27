@@ -116,6 +116,7 @@ results/exports/<timestamp>/<timestamp_from>-<timestamp_to>.diff.txt
 
 ## Future Work
 
+- See `todo.md`
 - See branch `feature/vulnerability-check` which begins to implement the `uv run python -m utils.extract_artifacts_v1 <folder>`.
   - Intent is to check pages and PDFs for vulnerabilities: watering hole attacks to foreign IP/domain, base64 encoded shell or PowerShell scrips, prompt injection attacks, etc.
   - This would be a new step after scrape and before compare.

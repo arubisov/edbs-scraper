@@ -1,6 +1,6 @@
 # Dev TODO
 
-Here are some high-level observations and refactoring suggestions, organized by concern:
+## Maintenance
 
 1. OOO principles. encapsulate the crawler state and behaviour in a class `Crawler` instead of the global vars currently used. parameterize the configs into a pydantic model. add error handling for missing env vars (e.g. start_url, password)
 2. concurrency. use `asyncio.Queue` for the scraper queue. page concurrency doesn't appear to be working properly - not erroring, but not actually async.
