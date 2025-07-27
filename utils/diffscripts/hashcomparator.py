@@ -10,12 +10,15 @@ Functions:
 - hash_and_compare(directory1, directory2): Hashes files in both directories (in parallel) and returns lists of changed, added, and removed files.
 """
 
-import re, hashlib, argparse, logging
-from pathlib import Path
-from datetime import datetime
+import argparse
+import hashlib
+import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from utils.configs.config import setup_logger
-lgg = setup_logger(logging.INFO)
+from datetime import datetime
+from pathlib import Path
+from sys import exc_info
+
+from utils.configs.logger import logger
 
 
 def sha256_hash_file(file_path: Path) -> tuple[str, str] | None:
@@ -29,14 +32,14 @@ def sha256_hash_file(file_path: Path) -> tuple[str, str] | None:
                 sha256.update(chunk)
         return file_path.name, sha256.hexdigest()
     except Exception as e:
-        lgg.er(f"Could not hash '{file_path}': {e}")
+        logger.error("File hash failed", file_path=file_path, err=e, exc_info=True)
         return None
 
 
 def hash_directory_multithreaded(path: str) -> dict[str, str]:
     dir_path = Path(path).resolve()
     if not dir_path.is_dir():
-        lgg.w(f"Directory does not exist: {dir_path}")
+        logger.warning("Hash directory does not exist", dir_path=dir_path)
         return {}
 
     file_paths = [p for p in dir_path.rglob("*") if p.is_file()]
@@ -69,7 +72,9 @@ def sort_dirs_if_timestamped(dir1: str, dir2: str) -> tuple[str, str]:
     return dir1, dir2
 
 
-def compare_hash_dicts(dict1: dict[str, str], dict2: dict[str, str]) -> tuple[list[str], list[str], list[str]]:
+def compare_hash_dicts(
+    dict1: dict[str, str], dict2: dict[str, str]
+) -> tuple[list[str], list[str], list[str]]:
     keys1 = set(dict1.keys())
     keys2 = set(dict2.keys())
 
@@ -77,30 +82,30 @@ def compare_hash_dicts(dict1: dict[str, str], dict2: dict[str, str]) -> tuple[li
     added = sorted(keys2 - keys1)
     common = keys1 & keys2
 
-    lgg.i("Comparison Results:")
+    logger.info("Comparison Results:")
 
     if removed:
-        lgg.i("Files only in Directory 1 (removed):")
+        logger.info("Files only in Directory 1 (removed):")
         for k in removed:
-            lgg.i(f"  {k}")
+            logger.info(f"  {k}")
 
     if added:
-        lgg.i("Files only in Directory 2 (added):")
+        logger.info("Files only in Directory 2 (added):")
         for k in added:
-            lgg.i(f"  {k}")
+            logger.info(f"  {k}")
 
     changed = sorted([k for k in common if dict1[k] != dict2[k]])
     if changed:
-        lgg.i("Files with same name but different content:")
+        logger.info("Files with same name but different content:")
         for k in changed:
-            lgg.i(f"  {k}")
+            logger.info(f"  {k}")
 
     matches = [k for k in common if dict1[k] == dict2[k]]
     if matches:
-        lgg.i(f"{len(matches)} identical files found.")
+        logger.info(f"{len(matches)} identical files found.")
 
     if not any([removed, added, changed]):
-        lgg.i("All files match exactly.")
+        logger.info("All files match exactly.")
 
     return changed, added, removed
 
@@ -133,10 +138,12 @@ if __name__ == "__main__":
     dir2 = Path(args.newdir).resolve() if args.newdir else None
 
     if not dir1 or not dir2:
-        parser.error("You must provide both directories as positional arguments, preferably as [oldDir] [newDir].")
+        parser.error(
+            "You must provide both directories as positional arguments, preferably as [oldDir] [newDir]."
+        )
 
     dir1_str, dir2_str = sort_dirs_if_timestamped(str(dir1), str(dir2))
-    lgg.i(f"Comparing directories:\n  OLD: {dir1_str}\n  NEW: {dir2_str}")
+    logger.info(f"Comparing directories", old=dir1_str, new=dir2_str)
 
     differences, added_files, removed_files = hash_and_compare(dir1_str, dir2_str)
     print((differences, added_files, removed_files))

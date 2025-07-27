@@ -10,15 +10,14 @@ Functions:
 - cli(): CLI interface for directory input, comparison validation, and main execution call.
 """
 
-
-import re, argparse, logging
+import argparse
+import re
 from pathlib import Path
-from utils.configs.config import setup_logger
-from utils.diffscripts.hashcomparator import hash_and_compare
-from utils.diffscripts.diffgen import generate_diff_report
-from utils.yn import prompt_yes_no
 
-lgg = setup_logger(logging.INFO)
+from utils.configs.logger import logger
+from utils.diffscripts.diffgen import generate_diff_report
+from utils.diffscripts.hashcomparator import hash_and_compare
+from utils.yn import prompt_yes_no
 
 
 def get_directory_input(prompt_text: str) -> Path:
@@ -26,7 +25,7 @@ def get_directory_input(prompt_text: str) -> Path:
         path = Path(input(f"{prompt_text}: ").strip()).resolve()
         if path.is_dir():
             return path
-        lgg.er("That path does not exist. Try again.")
+        logger.error("Input directory path does not exist", path=path)
 
 
 def is_timestamped_dir(name: str) -> bool:
@@ -39,16 +38,30 @@ def run_comparison(dir1: Path, dir2: Path) -> tuple[Path, Path] | None:
 
     if is_timestamped_dir(base1_input) and is_timestamped_dir(base2_input):
         if base1_input > base2_input:
-            lgg.w(f"'{base1_input}' appears newer than '{base2_input}', but was passed as the OLD directory.")
-            if not prompt_yes_no("Would you like to auto-sort them (older first) before proceeding?"):
-                lgg.i("Operation cancelled.")
+            logger.warning(
+                "Old directory appears newer than new directory; check order.",
+                old_dir=base1_input,
+                new_dir=base2_input,
+            )
+            if not prompt_yes_no(
+                "Would you like to auto-sort them (older first) before proceeding?"
+            ):
+                logger.info("Operation cancelled by user.")
                 return None
-            lgg.i(f"Auto-sorting directories: {base2_input} (OLD), {base1_input} (NEW)")
+            logger.info(
+                "Auto-sorting directories for comparison.",
+                old_dir=base2_input,
+                new_dir=base1_input,
+            )
             dir1, dir2 = dir2, dir1
 
-    lgg.w(f"You are about to compare:\n  OLD: {dir1}\n  NEW: {dir2}")
+    logger.info(
+        "About to compare directories.",
+        old_dir=str(dir1),
+        new_dir=str(dir2),
+    )
     if not prompt_yes_no("Proceed with comparison?"):
-        lgg.i("Operation cancelled.")
+        logger.info("Operation cancelled by user.")
         return None
 
     return dir1, dir2
@@ -65,8 +78,16 @@ def cli():
     parser.add_argument("newdir", nargs="?", help="New directory (positional)")
     args = parser.parse_args()
 
-    dir1 = Path(args.olddir).resolve() if args.olddir else get_directory_input("Enter path to OLD directory")
-    dir2 = Path(args.newdir).resolve() if args.newdir else get_directory_input("Enter path to NEW directory")
+    dir1 = (
+        Path(args.olddir).resolve()
+        if args.olddir
+        else get_directory_input("Enter path to OLD directory")
+    )
+    dir2 = (
+        Path(args.newdir).resolve()
+        if args.newdir
+        else get_directory_input("Enter path to NEW directory")
+    )
 
     sorted_dirs = run_comparison(dir1, dir2)
     if not sorted_dirs:
@@ -74,7 +95,6 @@ def cli():
 
     old_dir, new_dir = sorted_dirs
     main(old_dir, new_dir)
-
 
 
 if __name__ == "__main__":
