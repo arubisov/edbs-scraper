@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     token_file: str = "token.json"
     openai_api_key: str = ""
     openai_model_version: str = "gpt-4o-mini"
+    log_file: str = "edbs-scraper.log"
 
     class Config:
         env_file = ".env"
