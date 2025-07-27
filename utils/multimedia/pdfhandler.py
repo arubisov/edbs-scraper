@@ -1,17 +1,19 @@
 import asyncio
-import logging
 from pathlib import Path
+from sys import exc_info
 from urllib.parse import urlparse
 
 import aiofiles
 from pdfminer.high_level import extract_text as extract_pdf_text
 from playwright.async_api import APIResponse, Response
 
-logger = logging.getLogger(__name__)
+from utils.configs.logger import logger
 
 
 class PDFHandler:
-    def __init__(self, output_dir: Path, queue: asyncio.Queue, context, metrics_store: dict = None):
+    def __init__(
+        self, output_dir: Path, queue: asyncio.Queue, context, metrics_store: dict = None
+    ):
         self.out_dir = output_dir  # This should be the /results/[timestamp]/pdf directory
         self.queue = queue
         self.context = context
@@ -34,7 +36,7 @@ class PDFHandler:
                 await self.download_and_process_pdf(url)
             except Exception as e:
                 self.metrics["failures"] += 1
-                logger.warning("PDF handling failed for %s: %s", url, e)
+                logger.warning("PDF handling failed", url=url, err=e, exc_info=True)
             finally:
                 self.queue.task_done()
 
@@ -44,18 +46,18 @@ class PDFHandler:
             await self.handle_response(res)
         except Exception as e:
             self.metrics["retries"] += 1
-            logger.warning("Initial fetch failed for %s: %s — Retrying...", url, e)
+            logger.warning("PDF fetch failed - retrying", url=url, err=e, exc_info=True)
             try:
                 fresh_res = await self.context.request.get(url)
                 await self.handle_response(fresh_res, is_retry=True)
             except Exception as retry_err:
                 self.metrics["failures"] += 1
-                logger.error("Retry also failed for %s: %s", url, retry_err)
+                logger.error("PDF fetch retry failed", url=url, err=retry_err, exc_info=True)
 
     async def handle_response(self, res: Response | APIResponse, is_retry: bool = False):
         ctype = res.headers.get("content-type", "")
         if "application/pdf" not in ctype.lower():
-            logger.debug("Skipped non-PDF content-type: %s (%s)", ctype, res.url)
+            (logger.debug("Skipped non-PDF content-type", url=res.url, ctype=ctype),)
             return
 
         try:
@@ -64,30 +66,29 @@ class PDFHandler:
         except Exception as e:
             if is_retry:
                 self.metrics["failures"] += 1
-                logger.warning("PDF save failed for %s: %s", res.url, e)
             else:
                 raise e
 
     async def save_pdf(self, url: str, status: int, data: bytes):
         name = urlparse(url).path.split("/")[-1] or "doc.pdf"
-        pdf_path = self.out_dir / name                      # goes in /pdf/
-        text_path = self.out_dir.parent / f"{name}.txt"     # goes in parent timestamp dir
-    
+        pdf_path = self.out_dir / name  # goes in /pdf/
+        text_path = self.out_dir.parent / f"{name}.txt"  # goes in parent timestamp dir
+
         if pdf_path.exists():
-            logger.info("Skipping existing PDF: %s", name)
+            logger.info("Skipping existing PDF", name=name)
             return
-    
+
         if status != 200:
-            logger.warning("HTTP %d while fetching %s", status, url)
+            logger.warning(f"HTTP {status} while fetching", url=url)
             self.metrics["failures"] += 1
             return
-    
+
         async with aiofiles.open(pdf_path, "wb") as f:
             await f.write(data)
-    
+
         text = await asyncio.to_thread(extract_pdf_text, pdf_path)
         async with aiofiles.open(text_path, "w", encoding="utf-8") as f:
             await f.write(text)
-    
+
         self.metrics["pdfs_downloaded"] += 1
-        logger.info("PDF saved: %s and text extracted to: %s", pdf_path, text_path)
+        logger.info("PDF and extracted text saved", filename=f"{name}[.txt]")

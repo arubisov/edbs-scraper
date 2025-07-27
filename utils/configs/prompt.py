@@ -89,7 +89,7 @@ Changes observed between {{FROM_DATE}} and {{TO_DATE}}
 """
 
 SUMMARY_PREAMBLE = """
-# Changes observed between {{FROM_DATE}} and {{TO_DATE}}
+# EDBS updates from {{FROM_DATE}} to {{TO_DATE}}
 
 ## Summary of changes
 

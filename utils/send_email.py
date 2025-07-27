@@ -2,16 +2,11 @@
 PATH: ./wix-scraper/utils/
 """
 
-
 import argparse
 import base64
 import mimetypes
 import os
 from email.message import EmailMessage
-from email.mime.audio import MIMEAudio
-from email.mime.base import MIMEBase
-from email.mime.image import MIMEImage
-from email.mime.text import MIMEText
 from pathlib import Path
 
 from google.auth.transport.requests import Request

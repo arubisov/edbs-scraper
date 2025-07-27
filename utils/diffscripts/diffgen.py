@@ -6,13 +6,12 @@ Functions:
   Compares matching files line-by-line and outputs a diff report, including added and removed files.
 """
 
-import logging
-from pathlib import Path
 from difflib import SequenceMatcher
+from pathlib import Path
 from shutil import copy2
-from utils.configs.config import setup_logger
+from sys import exc_info
 
-lgg = setup_logger(logging.INFO)
+from utils.configs.logger import logger
 
 
 def export_file(file: str, src_dir: Path, dst_root: Path):
@@ -24,7 +23,7 @@ def export_file(file: str, src_dir: Path, dst_root: Path):
         if alt_src.exists():
             src = alt_src
         else:
-            lgg.i(f"Failed to export '{file}': File not found in root or /pdf")
+            logger.warning("Failed to export - File not found in root or /pdf", file=file)
             return
 
     # Determine export target
@@ -38,9 +37,9 @@ def export_file(file: str, src_dir: Path, dst_root: Path):
     dst.parent.mkdir(parents=True, exist_ok=True)
     try:
         copy2(src, dst)
-        lgg.i(f"Exported: {file}")
+        logger.info("Exported file", file=file)
     except Exception as e:
-        lgg.i(f"Failed to export '{file}': {e}")
+        logger.warning(f"File export failed", file=file, err=e, exc_info=True)
 
 
 def generate_diff_report(changed_files, added_files, removed_files, dir1, dir2):
@@ -64,24 +63,31 @@ def generate_diff_report(changed_files, added_files, removed_files, dir1, dir2):
             file2_path = dir2_path / filename
 
             try:
-                with file1_path.open("r", encoding="utf-8") as f1, file2_path.open("r", encoding="utf-8") as f2:
+                with (
+                    file1_path.open("r", encoding="utf-8") as f1,
+                    file2_path.open("r", encoding="utf-8") as f2,
+                ):
                     lines1 = f1.readlines()
                     lines2 = f2.readlines()
 
                 matcher = SequenceMatcher(None, lines1, lines2)
                 for tag, i1, i2, j1, j2 in matcher.get_opcodes():
-                    if tag == 'equal':
+                    if tag == "equal":
                         continue
 
                     out.write(f"\n--- Change ({tag.upper()}): {filename}\n")
 
-                    if tag in ('replace', 'delete'):
+                    if tag in ("replace", "delete"):
                         out.write(f"<<<< {name1}/{filename} [lines {i1 + 1}-{i2}]\n")
-                        out.writelines(line if line.strip() else "[BLANK LINE]\n" for line in lines1[i1:i2])
+                        out.writelines(
+                            line if line.strip() else "[BLANK LINE]\n" for line in lines1[i1:i2]
+                        )
 
-                    if tag in ('replace', 'insert'):
+                    if tag in ("replace", "insert"):
                         out.write(f">>>> {name2}/{filename} [lines {j1 + 1}-{j2}]\n")
-                        out.writelines(line if line.strip() else "[BLANK LINE]\n" for line in lines2[j1:j2])
+                        out.writelines(
+                            line if line.strip() else "[BLANK LINE]\n" for line in lines2[j1:j2]
+                        )
 
                     out.write("\n")
 
@@ -92,12 +98,16 @@ def generate_diff_report(changed_files, added_files, removed_files, dir1, dir2):
 
         # Summary of added and removed files
         out.write("\n-----------------------\nAdded files:\n")
-        out.writelines(f"{file}\n" for file in added_files) if added_files else out.write("(None)\n")
+        out.writelines(f"{file}\n" for file in added_files) if added_files else out.write(
+            "(None)\n"
+        )
 
         out.write("\n------------------------\nRemoved files:\n")
-        out.writelines(f"{file}\n" for file in removed_files) if removed_files else out.write("(None)\n")
+        out.writelines(f"{file}\n" for file in removed_files) if removed_files else out.write(
+            "(None)\n"
+        )
 
-    lgg.i(f"Differences written to: {output_file}")
+    logger.info(f"Diffs written to file.", output_file=output_file)
 
     for file in added_files:
         export_file(file, dir2_path, exports_dir)

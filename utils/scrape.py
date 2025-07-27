@@ -9,7 +9,6 @@ Functions:
 """
 
 import asyncio
-import logging
 import re
 from datetime import datetime
 from pathlib import Path
@@ -21,22 +20,19 @@ from playwright.async_api import BrowserContext, Response, TimeoutError, async_p
 from playwright_stealth import Stealth
 
 from utils.configs.config import settings
-from utils.multimedia.pdfhandler import PDFHandler  # NEW
+from utils.configs.logger import logger
+from utils.multimedia.pdfhandler import PDFHandler
 
 START_URL = settings.start_url
 WIX_PASSWORD = settings.wix_password
 URL_BLACKLIST = settings.url_blacklist
 CONCURRENCY = 5
-BASE_DIR = Path(__file__).resolve().parents[1]  # /wix-scraper/
+BASE_DIR = Path(__file__).resolve().parents[1]
 RESULTS_ROOT = BASE_DIR / "results"
 TIMESTAMP = datetime.now().strftime("%y%m%d-%H%M%S")
 OUT_DIR = RESULTS_ROOT / TIMESTAMP
 PDF_DIR = OUT_DIR / "pdf"
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s: %(message)s",
-)
 metrics = {
     "pages_queued": 0,
     "pages_done": 0,
@@ -81,16 +77,9 @@ async def main():
                             await process_page(context, url, to_visit, visited, pdf_queue)
                         except Exception as e:
                             metrics["failures"] += 1
-                            logging.warning("Error processing page %s: %s", url, e, exc_info=True)
+                            logger.warning("Error processing page", url=url, err=e, exc_info=True)
                 metrics["pages_queued"] = len(to_visit)
-                logging.info(
-                    "Metrics: queued=%d, done_pages=%d, done_pdfs=%d, retries=%d, failures=%d",
-                    metrics["pages_queued"],
-                    metrics["pages_done"],
-                    metrics["pdfs_downloaded"],
-                    metrics["retries"],
-                    metrics["failures"],
-                )
+                logger.info("Metrics", **metrics)
 
         await asyncio.gather(*(worker() for _ in range(CONCURRENCY)))
 
@@ -105,16 +94,14 @@ async def main():
 async def process_page(
     context: BrowserContext, url: str, to_visit: set, visited: set, pdf_queue: asyncio.Queue
 ):
-    retry_page = False
-
-    logging.info(f"Visiting page {url}")
+    logger.info("Visiting page", url=url)
 
     page = await context.new_page()
 
     try:
         await page.goto(url, wait_until="networkidle", timeout=45000)
     except Exception as e:
-        logging.warning("Error navigating to %s: %s", url, e, exc_info=True)
+        logger.warning("Error navigating", url=url, err=e, exc_info=True)
         await page.close()
         metrics["failures"] += 1
         return
@@ -128,9 +115,9 @@ async def process_page(
             await page.locator("#SITE_CONTAINER").wait_for(state="visible", timeout=10000)
             await page.wait_for_load_state("networkidle", timeout=30001)
     except TimeoutError as te:
-        logging.warning("Timeout error on %s - accepting partial download - {%s}", url, te)
+        logger.warning("Timeout error - accepting partial download", url=url)
     except Exception as e:
-        logging.warning("Password entry failed for %s: %s", url, e, exc_info=True)
+        logger.warning("Password entry failed", url=url, err=e, exc_info=True)
 
     texts = []
     for frame in page.frames:
@@ -143,7 +130,7 @@ async def process_page(
 
     first_line = texts[0].splitlines()[0] if texts else ""
     if first_line.strip() in {"ERROR: FORBIDDEN", "Password Protected"}:
-        logging.warning("Access denied on %s - queued for retry", url)
+        logger.warning("Access denied - queued for retry", url=url)
         visited.remove(url)
         to_visit.add(url)
         await page.close()
@@ -155,7 +142,7 @@ async def process_page(
     text_path = OUT_DIR / f"{fname}.txt"
     async with aiofiles.open(text_path, "w", encoding="utf-8") as f:
         await f.write("\n\n".join(texts))
-    logging.info("Text saved: %s", fname)
+    logger.info("Text saved", fname=fname)
     metrics["pages_done"] += 1
 
     html = await page.content()
@@ -172,7 +159,7 @@ async def process_page(
             await page.wait_for_timeout(500)
         except Exception as e:
             metrics["failures"] += 1
-            logging.warning("Tab click failed for %s: %s", url, e, exc_info=True)
+            logger.warning("Tab click failed", url=url, err=e, exc_info=True)
 
     await page.close()
 
@@ -183,7 +170,7 @@ def url_to_filename(u: str) -> str:
 
 def is_same_domain(u: str) -> bool:
     if urlparse(u).netloc != urlparse(START_URL).netloc:
-        logging.warning(f"Detected link to external domain: {u}")
+        logger.warning(f"Detected link to external domain", url=u)
         return False
     return True
 
