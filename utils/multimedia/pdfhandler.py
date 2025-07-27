@@ -70,24 +70,24 @@ class PDFHandler:
 
     async def save_pdf(self, url: str, status: int, data: bytes):
         name = urlparse(url).path.split("/")[-1] or "doc.pdf"
-        pdf_path = self.out_dir / name
-        text_path = pdf_path.with_suffix(".pdf.txt")
-
+        pdf_path = self.out_dir / name                      # goes in /pdf/
+        text_path = self.out_dir.parent / f"{name}.txt"     # goes in parent timestamp dir
+    
         if pdf_path.exists():
             logger.info("Skipping existing PDF: %s", name)
             return
-
+    
         if status != 200:
             logger.warning("HTTP %d while fetching %s", status, url)
             self.metrics["failures"] += 1
             return
-
+    
         async with aiofiles.open(pdf_path, "wb") as f:
             await f.write(data)
-
+    
         text = await asyncio.to_thread(extract_pdf_text, pdf_path)
         async with aiofiles.open(text_path, "w", encoding="utf-8") as f:
             await f.write(text)
-
+    
         self.metrics["pdfs_downloaded"] += 1
-        logger.info("PDF processed and saved: %s", pdf_path)
+        logger.info("PDF saved: %s and text extracted to: %s", pdf_path, text_path)
